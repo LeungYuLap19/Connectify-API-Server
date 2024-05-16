@@ -1,7 +1,7 @@
-const db = require('../config/firebase');
+const fbAdmin = require('../config/firebase');
 const bcrypt = require('bcrypt'); 
 
-const usersCollection = db.collection('users');
+const usersCollection = fbAdmin.db.collection('users');
 
 async function createUser(userData) {
     try {

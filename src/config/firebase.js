@@ -4,8 +4,13 @@ var serviceAccount = require("C:\\Users\\jimmy\\Desktop\\Learn React\\connectify
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
+    storageBucket: 'connectify-39af7.appspot.com',
 });
 
 const db = admin.firestore();
+const storage = admin.storage().bucket();
 
-module.exports = db;
+module.exports = {
+    db, 
+    storage
+};
