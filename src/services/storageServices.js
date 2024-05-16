@@ -23,7 +23,7 @@ async function uploadImage(image64, folderName, fileName) {
         });
 
         blobStream.on('finish', () => {
-            const publicUrl = `https://storage.googleapis.com/${fbAdmin.storage.name}/${blob.name}`;
+            const publicUrl = `${blob.name}`;
             res(publicUrl);
         });
 
@@ -31,6 +31,25 @@ async function uploadImage(image64, folderName, fileName) {
     });
 }
 
+async function getImage(filePath) {
+    const file = fbAdmin.storage.file(filePath);
+  
+    return new Promise((resolve, reject) => {
+      file.download((err, contents) => {
+        if (err) {
+          reject(err);
+        } else {
+          const base64 = contents.toString('base64');
+          const mimeType = 'image/jpeg'; // Set the appropriate MIME type for the image
+  
+          const dataUrl = `data:${mimeType};base64,${base64}`;
+          resolve(dataUrl);
+        }
+      });
+    });
+  }
+
 module.exports = {
     uploadImage,
+    getImage
 }

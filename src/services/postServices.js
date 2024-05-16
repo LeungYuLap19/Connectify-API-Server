@@ -1,5 +1,5 @@
 const fbAdmin = require('../config/firebase');
-const { uploadImage } = require('./storageServices');
+const { uploadImage, getImage } = require('./storageServices');
 
 const postsCollection = fbAdmin.db.collection('posts');
 
@@ -21,6 +21,33 @@ async function createPost(postData) {
     }
 }
 
+async function getPostsByUserId(userid) {
+    try {
+        const querySnapshot = await postsCollection.where('userid', '==', userid).get();
+    
+        const posts = [];
+        for (const doc of querySnapshot.docs) {
+            const postData = doc.data();
+
+            // Retrieve base64-encoded images for each photo path
+            const images64 = await Promise.all(postData.photo.map(imagePath => {
+                return getImage(imagePath);
+            }));
+
+            // Replace photo paths with base64-encoded images
+            postData.photo = images64;
+
+            posts.push(postData);
+        }
+    
+        return posts;
+    } catch (error) {
+      console.error('Error retrieving posts', error);
+      throw error;
+    }
+  }
+
 module.exports = {
     createPost,
+    getPostsByUserId
 }
