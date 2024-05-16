@@ -47,7 +47,7 @@ async function userLogin(identifier, password) {
             const passwordMatch = await bcrypt.compare(password, userData.password);
             if (passwordMatch) {
                 delete userData.password;
-                return userData;
+                return {id: userDoc.id, ...userData};
             } else {
                 throw new Error('Incorrect password');
             }
