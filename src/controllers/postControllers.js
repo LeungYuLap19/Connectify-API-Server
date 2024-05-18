@@ -24,7 +24,24 @@ async function getPostsByUserId(req, res) {
     }
 }
 
+async function toggleLikeOnPost(req, res) {
+    try {
+        const { userid, postid } = req.body;
+        const updatedLikes = await postServices.toggleLikeOnPost(postid, userid);
+        if (updatedLikes) {
+            res.status(200).json({message: 'Toggle like', likes: updatedLikes});
+        }
+    } catch (error) {
+        console.error('Error toggling like on post:', error);
+        if (error.message === 'Post not found') {
+            return res.status(400).json({ error: 'Post not found' });
+        }
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
 module.exports = {
     createPost,
-    getPostsByUserId
+    getPostsByUserId,
+    toggleLikeOnPost
 }

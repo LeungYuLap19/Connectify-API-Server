@@ -4,5 +4,6 @@ const router = express.Router();
 
 router.post('/createPost', postControllers.createPost);
 router.post('/getPostsByUserid', postControllers.getPostsByUserId);
+router.post('/toggleLikeOnPost', postControllers.toggleLikeOnPost);
 
 module.exports = router;

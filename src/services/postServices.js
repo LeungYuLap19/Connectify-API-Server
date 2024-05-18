@@ -27,27 +27,59 @@ async function getPostsByUserId(userid) {
     
         const posts = [];
         for (const doc of querySnapshot.docs) {
-            const postData = doc.data();
+            const postData = {
+                id: doc.id,
+                ...doc.data()
+            };
 
-            // Retrieve base64-encoded images for each photo path
             const images64 = await Promise.all(postData.photo.map(imagePath => {
                 return getImage(imagePath);
             }));
 
-            // Replace photo paths with base64-encoded images
             postData.photo = images64;
 
             posts.push(postData);
         }
-    
+        posts.sort((a, b) => new Date(b.postTime) - new Date(a.postTime));
         return posts;
     } catch (error) {
       console.error('Error retrieving posts', error);
       throw error;
     }
-  }
+}
+
+async function toggleLikeOnPost(postid, userid) {
+    try {
+        const postRef = postsCollection.doc(postid);
+        const querySnapshot = await postRef.get();
+
+        if (!querySnapshot.exists) {
+            throw new Error('Post not found');
+        } 
+
+        const postData = querySnapshot.data();
+        const userLikedIndex = postData.likes.indexOf(userid);
+
+        let updatedLikes;
+        if (userLikedIndex === -1) {
+            updatedLikes = [...postData.likes, userid];
+        }
+        else {
+            updatedLikes = [...postData.likes];
+            updatedLikes.splice(userLikedIndex, 1);
+        }
+
+        await postRef.update({ likes: updatedLikes });
+        return updatedLikes;
+
+    } catch (error) {
+        console.error('Error toggling like on post', error);
+        throw error;
+    }
+}
 
 module.exports = {
     createPost,
-    getPostsByUserId
+    getPostsByUserId,
+    toggleLikeOnPost,
 }
