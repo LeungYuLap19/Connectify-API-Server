@@ -40,8 +40,25 @@ async function toggleLikeOnPost(req, res) {
     }
 }
 
+async function addComment(req, res) {
+    try {
+        const { comment, postid } = req.body;
+        const updatedComments = await postServices.addComment(comment, postid);
+        if (updatedComments) {
+            res.status(200).json({message: 'Added comment', comments: updatedComments});
+        }
+    } catch (error) {
+        console.error('Error adding comment:', error);
+        if (error.message === 'Post not found') {
+            return res.status(400).json({ error: 'Post not found' });
+        }
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
 module.exports = {
     createPost,
     getPostsByUserId,
-    toggleLikeOnPost
+    toggleLikeOnPost,
+    addComment,
 }

@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 
 const authRouters = require('./src/routers/authRouters');
 const postRouters = require('./src/routers/postRouters');
+const userRouters = require('./src/routers/userRouters');
 
 const app = express();
 app.use(cors());
@@ -12,6 +13,7 @@ app.use(express.json());
 
 app.use('/auth', authRouters);
 app.use('/post', postRouters);
+app.use('/user', userRouters);
 
 app.listen(3000, () => {
     console.log(`Server is running on http://localhost:${3000}`);

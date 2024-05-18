@@ -2,6 +2,7 @@ const fbAdmin = require('../config/firebase');
 const { uploadImage, getImage } = require('./storageServices');
 
 const postsCollection = fbAdmin.db.collection('posts');
+const usersCollection = fbAdmin.db.collection('users');
 
 async function createPost(postData) {
     try {
@@ -35,6 +36,17 @@ async function getPostsByUserId(userid) {
             const images64 = await Promise.all(postData.photo.map(imagePath => {
                 return getImage(imagePath);
             }));
+
+            for (const comment of postData.comments) {
+                const userSnapshot = await usersCollection.doc(comment.userid).get();
+                comment.user = {
+                    username: userSnapshot.data().username,
+                    icon: userSnapshot.data().icon,
+                    userid: userSnapshot.id
+                };
+            }
+
+            postData.comments.sort((a, b) => new Date(b.commentTime) - new Date(a.commentTime));
 
             postData.photo = images64;
 
@@ -78,8 +90,37 @@ async function toggleLikeOnPost(postid, userid) {
     }
 }
 
+async function addComment(comment, postid) {
+    try {   
+        const postRef = postsCollection.doc(postid);
+        const querySnapshot = await postRef.get();
+
+        if (!querySnapshot.exists) {
+            throw new Error('Post not found');
+        } 
+
+        const postData = querySnapshot.data();
+        let updatedComments = [...postData.comments, comment];
+
+        const userSnapshot = await usersCollection.doc(comment.userid).get();
+        comment.user = {
+            username: userSnapshot.data().username,
+            icon: userSnapshot.data().icon,
+            userid: userSnapshot.id
+        };
+        await postRef.update({ comments: updatedComments });
+
+        updatedComments.sort((a, b) => new Date(b.commentTime) - new Date(a.commentTime));
+        return updatedComments;
+    } catch (error) {
+        console.error('Error adding comment', error);
+        throw error;
+    }
+}
+
 module.exports = {
     createPost,
     getPostsByUserId,
     toggleLikeOnPost,
+    addComment,
 }
