@@ -13,6 +13,22 @@ async function searchUsernames(req, res) {
     }
 } 
 
+async function toggleFollowUser(req, res) {
+    try {
+        const { userid, followerid } = req.body;
+        const { updatedFollowers, updatedFollowings } = 
+            await userServices.toggleFollowUser(userid, followerid);
+
+        if (updatedFollowers && updatedFollowings) {
+            res.status(200).json({message: 'usernames found', followers: updatedFollowers, followings: updatedFollowings});
+        }
+    } catch (error) {
+        console.error('Error toggling follow:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
 module.exports = {
-    searchUsernames
+    searchUsernames,
+    toggleFollowUser
 }
