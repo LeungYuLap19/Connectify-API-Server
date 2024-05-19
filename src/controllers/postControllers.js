@@ -17,7 +17,7 @@ async function getPostsByUserId(req, res) {
     try {
         const { userid } = req.body;
         const posts = await postServices.getPostsByUserId(userid);
-        res.status(200).json({message: 'Post created successfully', data: posts});
+        res.status(200).json({message: 'Post got successfully', data: posts});
     } catch (error) {
         console.error('Error getting post:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -56,9 +56,24 @@ async function addComment(req, res) {
     }
 }
 
+async function getPostsFromFollowing(req, res) {
+    try {
+        const { userid, lastPostTime } = req.query;
+        const posts = await postServices.getPostsFromFollowing(userid, lastPostTime);
+        res.status(200).json({message: 'Post got successfully', data: posts});
+    } catch (error) {
+        console.error('Error adding comment:', error);
+        if (error.message === 'User not found') {
+            return res.status(400).json({ error: 'User not found' });
+        }
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
 module.exports = {
     createPost,
     getPostsByUserId,
     toggleLikeOnPost,
     addComment,
+    getPostsFromFollowing,
 }

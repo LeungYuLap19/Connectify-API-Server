@@ -28,35 +28,15 @@ async function getPostsByUserId(userid) {
     
         const posts = [];
         for (const doc of querySnapshot.docs) {
-            const postData = {
-                id: doc.id,
-                ...doc.data()
-            };
-
-            const images64 = await Promise.all(postData.photo.map(imagePath => {
-                return getImage(imagePath);
-            }));
-
-            for (const comment of postData.comments) {
-                const userSnapshot = await usersCollection.doc(comment.userid).get();
-                comment.user = {
-                    username: userSnapshot.data().username,
-                    icon: userSnapshot.data().icon,
-                    userid: userSnapshot.id
-                };
-            }
-
-            postData.comments.sort((a, b) => new Date(b.commentTime) - new Date(a.commentTime));
-
-            postData.photo = images64;
-
+            const postData = await processPostData(doc, false);
             posts.push(postData);
         }
+
         posts.sort((a, b) => new Date(b.postTime) - new Date(a.postTime));
         return posts;
     } catch (error) {
-      console.error('Error retrieving posts', error);
-      throw error;
+        console.error('Error retrieving posts', error);
+        throw error;
     }
 }
 
@@ -118,9 +98,81 @@ async function addComment(comment, postid) {
     }
 }
 
+async function getPostsFromFollowing(userid, lastPostTime = null) {
+    try {
+        const userRef = usersCollection.doc(userid);
+        const userSnapshot = await userRef.get();
+
+        if (!userSnapshot.exists) {
+            throw new Error('User not found');
+        }
+
+        const userData = userSnapshot.data();
+        const followings = userData.followings;
+
+        if (followings.length === 0) {
+            return [];
+        }
+
+        let query = postsCollection
+            .where('userid', 'in', followings)
+            .orderBy('postTime', 'desc');
+
+        if (lastPostTime) {
+            query = query.startAfter(lastPostTime);
+        }
+
+        const querySnapshot = await query.limit(10).get();
+
+        const posts = [];
+        for (const doc of querySnapshot.docs) {
+            const postData = await processPostData(doc, true);
+            posts.push(postData);
+        }
+
+        return posts;
+    } catch (error) {
+        console.error('Error getting posts', error);
+        throw error;
+    }
+}
+
+async function processPostData(doc, feedPost) {
+    const postData = {
+        id: doc.id,
+        ...doc.data()
+    };
+
+    if (feedPost) {
+        const userSnapshot = await usersCollection.doc(postData.userid).get();
+        postData.user = {
+            id: userSnapshot.id,
+            ...userSnapshot.data(),
+        };
+        delete postData.user.password;
+    }
+
+    const images64 = await Promise.all(postData.photo.map(imagePath => getImage(imagePath)));
+
+    for (const comment of postData.comments) {
+        const userSnapshot = await usersCollection.doc(comment.userid).get();
+        comment.user = {
+            username: userSnapshot.data().username,
+            icon: userSnapshot.data().icon,
+            userid: userSnapshot.id
+        };
+    }
+
+    postData.comments.sort((a, b) => new Date(b.commentTime) - new Date(a.commentTime));
+    postData.photo = images64;
+
+    return postData;
+}
+
 module.exports = {
     createPost,
     getPostsByUserId,
     toggleLikeOnPost,
     addComment,
+    getPostsFromFollowing,
 }
