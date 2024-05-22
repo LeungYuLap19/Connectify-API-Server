@@ -7,5 +7,6 @@ router.post('/getPostsByUserid', postControllers.getPostsByUserId);
 router.post('/toggleLikeOnPost', postControllers.toggleLikeOnPost);
 router.post('/addComment', postControllers.addComment);
 router.get('/getPostsFromFollowing', postControllers.getPostsFromFollowing);
+router.get('/getPostByPostid/:postid', postControllers.getPostByPostid);
 
 module.exports = router;

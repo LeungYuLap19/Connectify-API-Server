@@ -28,7 +28,7 @@ async function getPostsByUserId(userid) {
     
         const posts = [];
         for (const doc of querySnapshot.docs) {
-            const postData = await processPostData(doc, false);
+            const postData = await processPostData(doc, true);
             posts.push(postData);
         }
 
@@ -169,10 +169,28 @@ async function processPostData(doc, feedPost) {
     return postData;
 }
 
+async function getPostByPostid(postid) {
+    try {
+        const postRef = postsCollection.doc(postid);
+        const querySnapshot = await postRef.get();
+
+        if (!querySnapshot.exists) {
+            throw new Error('Post not found');
+        }
+
+        const postData = await processPostData(querySnapshot, true);
+        return postData;
+    } catch (error) {
+        console.error('Error getting post by ID', error);
+        throw error;
+    }
+}
+
 module.exports = {
     createPost,
     getPostsByUserId,
     toggleLikeOnPost,
     addComment,
     getPostsFromFollowing,
+    getPostByPostid,  // Added this line
 }

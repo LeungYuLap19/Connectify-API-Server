@@ -70,10 +70,25 @@ async function getPostsFromFollowing(req, res) {
     }
 }
 
+async function getPostByPostid(req, res) {
+    try {
+        const postid = req.params.postid;
+        const data = await postServices.getPostByPostid(postid);
+        res.status(200).json({ message: 'Post got successfully', data: data });
+    } catch (error) {
+        console.error('Error getting post:', error);
+        if (error.message === 'Post not found') {
+            return res.status(400).json({ error: 'Post not found' });
+        }
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
 module.exports = {
     createPost,
     getPostsByUserId,
     toggleLikeOnPost,
     addComment,
     getPostsFromFollowing,
+    getPostByPostid
 }
