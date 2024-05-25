@@ -13,6 +13,17 @@ async function searchUsernames(req, res) {
     }
 } 
 
+async function getUser(req, res) {
+    try {
+        const userid = req.params.userid;
+        const data = await userServices.getUser(userid);
+        res.status(200).json({message: 'user found', data: data});
+    } catch (error) {
+        console.error('Error getting user:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
 async function toggleFollowUser(req, res) {
     try {
         const { userid, followerid } = req.body;
@@ -30,5 +41,6 @@ async function toggleFollowUser(req, res) {
 
 module.exports = {
     searchUsernames,
+    getUser,
     toggleFollowUser
 }

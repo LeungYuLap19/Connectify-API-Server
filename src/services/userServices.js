@@ -21,6 +21,23 @@ async function searchUsernames(input) {
     }
 }
 
+async function getUser(userid) {
+    try {
+        const userRef = usersCollection.doc(userid);
+        const userSnapshot = await userRef.get();
+        if (!userSnapshot.exists) {
+            throw new Error('User not found');
+        }
+
+        const userData = userSnapshot.data();
+        delete userData.password;
+        return {id: userRef.id, ...userData};
+    } catch (error) {
+        console.error('Error getting user:', error);
+        throw error;
+    }
+}
+
 async function toggleFollowUser(userid, followerid) {
     try {  
         const userRef = usersCollection.doc(userid);
@@ -64,5 +81,6 @@ async function toggleFollowUser(userid, followerid) {
 
 module.exports = {
     searchUsernames,
+    getUser,
     toggleFollowUser,
 }
