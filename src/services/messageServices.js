@@ -18,12 +18,12 @@ async function addMessage(message, chatroomid) {
         const querySnapshot = await chatroomRef.get();
 
         if (!querySnapshot.exists) {
-            throw new Error('Chatroom nto found');
+            throw new Error('Chatroom not found');
         }
 
         const chatroomData = querySnapshot.data();
         let updateMessages = [...chatroomData.messages, message];
-        await chatroomRef.update({ messages: updateMessages });
+        await chatroomRef.update({ messages: updateMessages, lastTime: message.dateTime });
         return true;
     } catch (error) {
         console.error('Error adding message', error);
@@ -49,8 +49,9 @@ async function getChatroomsByUserid(userid) {
         querySnapshot.forEach(doc => {
             const chatroom = doc.data();
             if (chatroom.users.some(user => user.id === userid)) {
-                chatroom.messages.sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
-                userChatrooms.push({ id: doc.id, ...chatroom });
+                chatroom.messages.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+                chatroom.id = doc.id; 
+                userChatrooms.push(chatroom);
             }
         });
 
