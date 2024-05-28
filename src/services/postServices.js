@@ -3,6 +3,7 @@ const { uploadImage, getImage } = require('./storageServices');
 
 const postsCollection = fbAdmin.db.collection('posts');
 const usersCollection = fbAdmin.db.collection('users');
+const postidsCollection = fbAdmin.db.collection('postids');
 
 async function createPost(postData) {
     try {
@@ -15,6 +16,7 @@ async function createPost(postData) {
         }));
 
         await postRef.set({...postData, photo: imageUrls});
+        await postidsCollection.doc(postRef.id).set({userid: postData.userid});
         return true;
     } catch (error) {
         console.error('Error creating post', error);
@@ -192,5 +194,6 @@ module.exports = {
     toggleLikeOnPost,
     addComment,
     getPostsFromFollowing,
-    getPostByPostid,  // Added this line
+    getPostByPostid,
+    processPostData,
 }
