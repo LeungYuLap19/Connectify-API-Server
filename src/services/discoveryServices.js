@@ -1,16 +1,29 @@
 const fbAdmin = require('../config/firebase');
 const postServices = require('./postServices');
+const seedrandom = require('seedrandom');
 
 const postsCollection = fbAdmin.db.collection('posts');
 const usersCollection = fbAdmin.db.collection('users');
 const postidsCollection = fbAdmin.db.collection('postids');
 
-async function randomPosts(userid, lastPostIndex = 0, limit = 10) {
+function seedShuffle(array, seed) {
+    const rng = seedrandom(seed);
+    let shuffledArray = array.slice(); // Create a copy of the array
+    for (let i = shuffledArray.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1)); // Generate pseudo-random number
+        [shuffledArray[i], shuffledArray[j]] = [shuffledArray[j], shuffledArray[i]]; // Swap elements
+    }
+    return shuffledArray;
+}
+
+async function randomPosts(userid, lastPostIndex = 0, limit = 12, seed = 12345) {
     try {
+        // Fetch user data and followings
         const userSnapshot = await usersCollection.doc(userid).get();
         const userData = userSnapshot.data();
-        const followings = userData.followings;
+        const followings = userData.followings.length === 0 ? ['placeholder'] : userData.followings;
 
+        // Fetch post IDs
         let query = postidsCollection.where('userid', 'not-in', followings);
         const postidsSnapshot = await query.get();
 
@@ -21,13 +34,14 @@ async function randomPosts(userid, lastPostIndex = 0, limit = 10) {
                 postidsList.push(doc.id);
             }
         });
-        const shuffledPostidsList = postidsList.sort(() => Math.random() - 0.5);
+
+        const shuffledPostidsList = seedShuffle(postidsList, seed);
         const paginatedPostidsList = shuffledPostidsList.slice(lastPostIndex, lastPostIndex + limit);
 
         const posts = [];
         for (let postid of paginatedPostidsList) {
             const postSnapshot = await postsCollection.doc(postid).get();
-            const postData = await postServices.processPostData(postSnapshot, true);
+            const postData = await postServices.processPostData(postSnapshot, false);
             posts.push(postData);
         }
 
@@ -42,4 +56,4 @@ async function randomPosts(userid, lastPostIndex = 0, limit = 10) {
 
 module.exports = {
     randomPosts,
-}
+};
