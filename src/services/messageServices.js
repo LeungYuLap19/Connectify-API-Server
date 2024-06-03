@@ -1,9 +1,18 @@
 const fbAdmin = require('../config/firebase');
+const { uploadImage, getImage } = require('./storageServices');
 const messagesCollection = fbAdmin.db.collection('messages');
+const { v4: uuidv4 } = require('uuid');
 
 async function createChatroom(chatroom) {
     try {
         const chatroomRef = messagesCollection.doc();
+        const message = chatroom.messages[0];
+
+        if (message.photo) {
+            const imageUrl = await uploadImage(message.photo, chatroomRef.id, uuidv4());
+            message.photo = imageUrl;
+        }
+    
         await chatroomRef.set(chatroom);
         return chatroomRef.id;
     } catch (error) {
@@ -31,6 +40,29 @@ async function addMessage(message, chatroomid) {
     }
 }
 
+async function addPhoto(message, chatroomid) {
+    try {
+        const chatroomRef = messagesCollection.doc(chatroomid)
+        const querySnapshot = await chatroomRef.get();
+
+        if (!querySnapshot.exists) {
+            throw new Error('Chatroom not found');
+        }
+
+        const imageUrl = await uploadImage(message.photo, chatroomid, uuidv4());
+
+        const chatroomData = querySnapshot.data();
+        const newMessage = {...message, photo: imageUrl};
+
+        const updateMessages = [...chatroomData.messages, newMessage];
+        await chatroomRef.update({ messages: updateMessages, lastTime: message.dateTime });
+        return true;
+    } catch (error) {
+        console.error('Error adding photo', error);
+        throw error;
+    }
+}
+
 async function removeChatroom(chatroomid) {
     try {
         await messagesCollection.doc(chatroomid).delete();
@@ -45,15 +77,17 @@ async function getChatroomsByUserid(userid) {
     try {
         const querySnapshot = await messagesCollection.get();
 
-        const userChatrooms = [];
-        querySnapshot.forEach(doc => {
+        const userChatroomsPromises = querySnapshot.docs.map(async doc => {
             const chatroom = doc.data();
             if (chatroom.users.some(user => user.id === userid)) {
-                chatroom.messages.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
-                chatroom.id = doc.id; 
-                userChatrooms.push(chatroom);
+                const chatroomData = await processChatroomData(chatroom);
+                chatroomData.messages.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+                chatroomData.id = doc.id; 
+                return chatroomData;
             }
         });
+
+        let userChatrooms = await Promise.all(userChatroomsPromises);
 
         userChatrooms.sort((a, b) => new Date(b.lastTime) - new Date(a.lastTime));
 
@@ -64,9 +98,27 @@ async function getChatroomsByUserid(userid) {
     }
 }
 
+async function processChatroomData(chatroom) {
+    const messages = chatroom.messages;
+
+    const processedMessagesPromises = messages.map(async (message) => {
+        if (!message.photo) {
+            return message;
+        }
+        const image64 = await getImage(message.photo); 
+        return { ...message, photo: image64 }; 
+    });
+
+    const processedMessages = await Promise.all(processedMessagesPromises);
+
+    const chatroomData = { ...chatroom, messages: processedMessages };
+    return chatroomData;
+}
+
 module.exports = {
     createChatroom, 
     addMessage,
+    addPhoto, 
     removeChatroom,
     getChatroomsByUserid
 }

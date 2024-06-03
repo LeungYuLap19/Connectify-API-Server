@@ -16,7 +16,7 @@ function seedShuffle(array, seed) {
     return shuffledArray;
 }
 
-async function randomPosts(userid, lastPostIndex = 0, limit = 12, seed = 12345) {
+async function randomPosts(userid, lastPostIndex = 0, limit = 9, seed = 123) {
     try {
         // Fetch user data and followings
         const userSnapshot = await usersCollection.doc(userid).get();

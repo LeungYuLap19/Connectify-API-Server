@@ -17,6 +17,7 @@
     "express": "^4.19.2",
     "firebase-admin": "^12.1.0",
     "fuzzysort": "^3.0.1",
-    "seedrandom": "^3.0.5"
+    "seedrandom": "^3.0.5",
+    "uuid": "^9.0.1"
   }
 }

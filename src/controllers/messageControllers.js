@@ -24,6 +24,19 @@ async function addMessage(req, res) {
     }
 }
 
+async function addPhoto(req, res) {
+    try {
+        const { message, chatroomid } = req.body;
+        const done = await messageServices.addPhoto(message, chatroomid);
+        if (done) {
+            res.status(200).json({ message: 'photo added' });
+        }
+    } catch (error) {
+        console.log('Error adding photo:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
 async function removeChatroom(req, res) {
     try {
         const { chatroomid } = req.body;
@@ -51,6 +64,7 @@ async function getChatroomsByUserid(req, res) {
 module.exports = {
     createChatroom, 
     addMessage,
+    addPhoto,
     removeChatroom,
     getChatroomsByUserid
 }
