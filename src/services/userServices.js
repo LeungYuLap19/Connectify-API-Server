@@ -79,8 +79,23 @@ async function toggleFollowUser(userid, followerid) {
     }
 }
 
+async function getListUsers(list) {
+    try {
+        const userPromises = list.map(async userid => {
+            return await getUser(userid);
+        });
+        const users = await Promise.all(userPromises);
+    
+        return users;
+    } catch (error) {
+        console.error('Error getting users:', error);
+        throw error;
+    }
+}
+
 module.exports = {
     searchUsernames,
     getUser,
     toggleFollowUser,
+    getListUsers
 }

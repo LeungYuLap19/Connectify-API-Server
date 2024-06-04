@@ -39,8 +39,20 @@ async function toggleFollowUser(req, res) {
     }
 }
 
+async function getListUsers(req, res) {
+    try {
+        const { list } = req.body;
+        const data = await userServices.getListUsers(list);
+        res.status(200).json({ message: 'users found', data: data });
+    } catch (error) {
+        console.error('Error getting users:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
 module.exports = {
     searchUsernames,
     getUser,
-    toggleFollowUser
+    toggleFollowUser,
+    getListUsers
 }

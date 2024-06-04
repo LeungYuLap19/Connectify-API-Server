@@ -88,7 +88,7 @@ async function getChatroomsByUserid(userid) {
         });
 
         let userChatrooms = await Promise.all(userChatroomsPromises);
-
+        userChatrooms = userChatrooms.filter(chatroom => chatroom !== undefined);
         userChatrooms.sort((a, b) => new Date(b.lastTime) - new Date(a.lastTime));
 
         return userChatrooms;
