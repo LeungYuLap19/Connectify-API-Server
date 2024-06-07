@@ -15,7 +15,6 @@ async function createUser(userData) {
 
         const userRef = usersCollection.doc(); 
         await userRef.set(userDataWithHashedPassword);
-        console.log('User added successfully');
 
         return { id: userRef.id, ...userDataWithoutPassword };
     } catch (error) {

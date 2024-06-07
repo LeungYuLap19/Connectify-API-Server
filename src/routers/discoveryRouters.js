@@ -2,6 +2,6 @@ const discoveryControllers = require('../controllers/discoveryControllers');
 const express = require('express');
 const router = express.Router();
 
-router.post('/randomPosts', discoveryControllers.randomPosts);
+router.get('/discoverUsers/:userid', discoveryControllers.discoverUsers);
 
 module.exports = router;

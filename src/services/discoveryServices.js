@@ -1,59 +1,74 @@
+const { firestore } = require('firebase-admin');
 const fbAdmin = require('../config/firebase');
 const postServices = require('./postServices');
-const seedrandom = require('seedrandom');
+const userServices = require('./userServices');
 
 const postsCollection = fbAdmin.db.collection('posts');
 const usersCollection = fbAdmin.db.collection('users');
 const postidsCollection = fbAdmin.db.collection('postids');
 
-function seedShuffle(array, seed) {
-    const rng = seedrandom(seed);
-    let shuffledArray = array.slice(); // Create a copy of the array
-    for (let i = shuffledArray.length - 1; i > 0; i--) {
-        const j = Math.floor(rng() * (i + 1)); // Generate pseudo-random number
-        [shuffledArray[i], shuffledArray[j]] = [shuffledArray[j], shuffledArray[i]]; // Swap elements
-    }
-    return shuffledArray;
-}
+// discoverPosts functions
 
-async function randomPosts(userid, lastPostIndex = 0, limit = 9, seed = 123) {
+async function discoverUsers(userid) {
     try {
-        // Fetch user data and followings
         const userSnapshot = await usersCollection.doc(userid).get();
         const userData = userSnapshot.data();
-        const followings = userData.followings.length === 0 ? ['placeholder'] : userData.followings;
+        const followings = userData.followings || [];
 
-        // Fetch post IDs
-        let query = postidsCollection.where('userid', 'not-in', followings);
-        const postidsSnapshot = await query.get();
+        let recommendedUserids = [];
 
-        let postidsList = [];
-        postidsSnapshot.forEach(doc => {
-            const postidData = doc.data();
-            if (postidData.userid !== userid) {
-                postidsList.push(doc.id);
-            }
-        });
-
-        const shuffledPostidsList = seedShuffle(postidsList, seed);
-        const paginatedPostidsList = shuffledPostidsList.slice(lastPostIndex, lastPostIndex + limit);
-
-        const posts = [];
-        for (let postid of paginatedPostidsList) {
-            const postSnapshot = await postsCollection.doc(postid).get();
-            const postData = await postServices.processPostData(postSnapshot, false);
-            posts.push(postData);
+        // If the user has followings, fetch recommended users based on followings
+        if (followings.length > 0) {
+            const recommendedUsers = await getRecommendedUsers(followings, userid, 8);
+            recommendedUserids = Object.entries(recommendedUsers)
+                .sort((a, b) => b[1] - a[1])
+                .map(entry => entry[0]);
         }
 
-        const newLastPostIndex = lastPostIndex + paginatedPostidsList.length;
+        // If there are less than 10 recommended users, fetch additional users from the collection
+        if (recommendedUserids.length < 8) {
+            const remainingCount = 8 - recommendedUserids.length;
+            const additionalUserDocs = recommendedUserids.length > 0
+                ? await usersCollection.where(firestore.FieldPath.documentId(), 'not-in', recommendedUserids).limit(remainingCount).get()
+                : await usersCollection.limit(remainingCount).get();            
+            const additionalUserids = additionalUserDocs.docs.map(doc => doc.id);
+            recommendedUserids.push(...additionalUserids);
+        }
 
-        return { data: posts, lastIndex: newLastPostIndex };
+        // Fetch user data for recommended user IDs
+        recommendedUserids = recommendedUserids.filter(id => !followings.includes(id) && id !== userid);
+        const usersData = await Promise.all(recommendedUserids.map(async userid => await userServices.getUser(userid)));
+
+        return usersData;
     } catch (error) {
-        console.error('Error getting posts', error);
+        console.error('Error getting users', error);
         throw error;
     }
 }
 
+async function getRecommendedUsers(followings, userid, maxRecommendations) {
+    let recommendedUsers = {};
+    let count = 0;
+
+    for (const following of followings) {
+        if (count >= maxRecommendations) break;
+
+        const followingUserSnapshot = await usersCollection.doc(following).get();
+        const followingUserData = followingUserSnapshot.data();
+
+        for (const following2 of followingUserData.followings || []) {
+            if (followings.includes(following2) || following2 === userid) continue;
+
+            recommendedUsers[following2] = (recommendedUsers[following2] || 0) + 1;
+            count++;
+
+            if (count >= maxRecommendations) break;
+        }
+    }
+
+    return recommendedUsers;
+}
+
 module.exports = {
-    randomPosts,
+    discoverUsers,
 };
