@@ -7,17 +7,23 @@ const rootFolderName = 'users';
 async function searchUsernames(input) {
     try {
         const querySnapshot = await usersCollection.get();
-        const users = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const users = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            username: doc.data().username,
+            icon: doc.data().icon
+        }));
 
         const results = fuzzysort.go(input, users, { key: 'username' });
 
         const searchResults = await Promise.all(results.map(async result => {
-            delete result.obj.password;
-
             const icon = result.obj.icon ? await getImage(result.obj.icon) : null;
-            const background = result.obj.background ? await getImage(result.obj.background) : null;
-            return { ...result.obj, icon: icon, background: background };
+            return {
+                id: result.obj.id,
+                username: result.obj.username,
+                icon: icon
+            };
         }));
+
         return searchResults;
     } catch (error) {
         console.error('Error searching usernames:', error);
@@ -89,7 +95,12 @@ async function toggleFollowUser(userid, followerid) {
 async function getListUsers(list) {
     try {
         const userPromises = list.map(async userid => {
-            return await getUser(userid);
+            const userData = await getUser(userid);
+            return {
+                id: userData.id,
+                username: userData.username,
+                icon: userData.icon
+            }
         });
         const users = await Promise.all(userPromises);
     

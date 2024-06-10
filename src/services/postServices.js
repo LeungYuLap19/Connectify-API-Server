@@ -87,9 +87,10 @@ async function addComment(comment, postid) {
         let updatedComments = [...postData.comments, comment];
 
         const userSnapshot = await usersCollection.doc(comment.userid).get();
+        const icon = userSnapshot.data().icon ? await getImage(userSnapshot.data().icon) : null;
         comment.user = {
             username: userSnapshot.data().username,
-            icon: userSnapshot.data().icon,
+            icon: icon,
             userid: userSnapshot.id
         };
         await postRef.update({ comments: updatedComments });
@@ -148,7 +149,12 @@ async function processPostData(doc, feedPost) {
     };
 
     if (feedPost) {
-        postData.user = await getUser(postData.userid);
+        const postUser = await getUser(postData.userid);
+        postData.user = {
+            username: postUser.username,
+            icon: postUser.icon,
+            id: postUser.id
+        }
     }
 
     const images64 = await Promise.all(postData.photo.map(imagePath => getImage(imagePath)));
@@ -158,7 +164,7 @@ async function processPostData(doc, feedPost) {
         comment.user = {
             username: commentUser.username,
             icon: commentUser.icon,
-            userid: commentUser.id
+            id: commentUser.id
         };
     }
 

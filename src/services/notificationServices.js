@@ -1,4 +1,5 @@
 const fbAdmin = require('../config/firebase');
+const { getUser } = require('./userServices');
 
 const notificationCollection = fbAdmin.db.collection('notifications');
 
@@ -18,16 +19,26 @@ async function getNotifications(userid) {
         const querySnapshot = await notificationCollection.where('toUser', '==', userid).get();
 
         const notifications = [];
+        const userPromises = [];
+
         querySnapshot.forEach(doc => {
-            const data = {
+            const notificationData = {
                 id: doc.id,
                 ...doc.data()
             };
-            notifications.push(data);
+            notifications.push(notificationData);
+            const userPromise = getUser(notificationData.fromUser);
+            userPromises.push(userPromise);
         });
 
-        notifications.sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
-        return notifications; 
+        const usersData = await Promise.all(userPromises);
+        const notificationsWithUserData = notifications.map((notification, index) => {
+            notification.fromUser = usersData[index];
+            return notification;
+        });
+        notificationsWithUserData.sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
+
+        return notificationsWithUserData;
     } catch (error) {
         console.error('Error getting notifications', error);
         throw error;
