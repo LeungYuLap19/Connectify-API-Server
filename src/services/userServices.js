@@ -1,6 +1,8 @@
 const fuzzysort = require('fuzzysort');
 const fbAdmin = require('../config/firebase');
+const { uploadImage, getImage } = require('./storageServices');
 const usersCollection = fbAdmin.db.collection('users');
+const rootFolderName = 'users';
 
 async function searchUsernames(input) {
     try {
@@ -9,11 +11,13 @@ async function searchUsernames(input) {
 
         const results = fuzzysort.go(input, users, { key: 'username' });
 
-        const searchResults = [];
-        results.map(result => {
+        const searchResults = await Promise.all(results.map(async result => {
             delete result.obj.password;
-            searchResults.push(result.obj);
-        });
+
+            const icon = result.obj.icon ? await getImage(result.obj.icon) : null;
+            const background = result.obj.background ? await getImage(result.obj.background) : null;
+            return { ...result.obj, icon: icon, background: background };
+        }));
         return searchResults;
     } catch (error) {
         console.error('Error searching usernames:', error);
@@ -31,7 +35,10 @@ async function getUser(userid) {
 
         const userData = userSnapshot.data();
         delete userData.password;
-        return {id: userRef.id, ...userData};
+
+        const icon = userData.icon ? await getImage(userData.icon) : null;
+        const background = userData.background ? await getImage(userData.background) : null;
+        return {id: userRef.id, ...userData, icon: icon, background: background};
     } catch (error) {
         console.error('Error getting user:', error);
         throw error;
@@ -93,9 +100,45 @@ async function getListUsers(list) {
     }
 }
 
+async function setIcon(userid, image) {
+    try {
+        const userRef = usersCollection.doc(userid);
+        const userSnapshot = await userRef.get();
+        const userData = userSnapshot.data();
+        const fileName = 'icon';
+
+        const imageUrl = await uploadImage(image, rootFolderName, userid, fileName);
+
+        await userRef.set({ ...userData, icon: imageUrl });
+        return true;
+    } catch (error) {
+        console.error('Error setting icon', error);
+        throw error;
+    }
+}
+
+async function setBackground(userid, image) {
+    try {
+        const userRef = usersCollection.doc(userid);
+        const userSnapshot = await userRef.get();
+        const userData = userSnapshot.data();
+        const fileName = 'background';
+
+        const imageUrl = await uploadImage(image, rootFolderName, userid, fileName);
+
+        await userRef.set({ ...userData, background: imageUrl });
+        return true;
+    } catch (error) {
+        console.error('Error setting background', error);
+        throw error;
+    }
+}
+
 module.exports = {
     searchUsernames,
     getUser,
     toggleFollowUser,
-    getListUsers
+    getListUsers,
+    setIcon,
+    setBackground
 }

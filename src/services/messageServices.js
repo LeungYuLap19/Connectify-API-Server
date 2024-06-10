@@ -1,7 +1,9 @@
 const fbAdmin = require('../config/firebase');
 const { uploadImage, getImage } = require('./storageServices');
 const messagesCollection = fbAdmin.db.collection('messages');
+const usersCollection = fbAdmin.db.collection('users');
 const { v4: uuidv4 } = require('uuid');
+const rootFolderName = 'chatrooms'
 
 async function createChatroom(chatroom) {
     try {
@@ -9,7 +11,7 @@ async function createChatroom(chatroom) {
         const message = chatroom.messages[0];
 
         if (message.photo) {
-            const imageUrl = await uploadImage(message.photo, chatroomRef.id, uuidv4());
+            const imageUrl = await uploadImage(message.photo, rootFolderName, chatroomRef.id, uuidv4());
             message.photo = imageUrl;
         }
     
@@ -49,7 +51,7 @@ async function addPhoto(message, chatroomid) {
             throw new Error('Chatroom not found');
         }
 
-        const imageUrl = await uploadImage(message.photo, chatroomid, uuidv4());
+        const imageUrl = await uploadImage(message.photo, rootFolderName, chatroomid, uuidv4());
 
         const chatroomData = querySnapshot.data();
         const newMessage = {...message, photo: imageUrl};
@@ -90,7 +92,6 @@ async function getChatroomsByUserid(userid) {
         let userChatrooms = await Promise.all(userChatroomsPromises);
         userChatrooms = userChatrooms.filter(chatroom => chatroom !== undefined);
         userChatrooms.sort((a, b) => new Date(b.lastTime) - new Date(a.lastTime));
-
         return userChatrooms;
     } catch (error) {
         console.error('Error getting chatrooms', error);
@@ -111,7 +112,24 @@ async function processChatroomData(chatroom) {
 
     const processedMessages = await Promise.all(processedMessagesPromises);
 
-    const chatroomData = { ...chatroom, messages: processedMessages };
+    const processedUsersPromises = chatroom.users.map(async (user) => {
+        const userDoc = await usersCollection.doc(user.id).get();
+        const userData = userDoc.data();
+        const icon = userData.icon ? await getImage(userData.icon) : null;
+        return {
+            id: user.id,
+            username: userData.username,
+            icon: icon,
+        };
+    });
+
+    const processedUsers = await Promise.all(processedUsersPromises);
+
+    const chatroomData = { 
+        ...chatroom, 
+        messages: processedMessages,
+        users: processedUsers
+    };
     return chatroomData;
 }
 

@@ -1,5 +1,6 @@
 const fbAdmin = require('../config/firebase');
 const { uploadImage, getImage } = require('./storageServices');
+const { getUser } = require('./userServices');
 
 const postsCollection = fbAdmin.db.collection('posts');
 const usersCollection = fbAdmin.db.collection('users');
@@ -11,8 +12,9 @@ async function createPost(postData) {
         const folderName = postRef.id;
 
         const imageUrls = await Promise.all(postData.photo.map((image, index) => {
+            const rootFolderName = 'posts'
             const fileName = `${index}.jpg`;
-            return uploadImage(image, folderName, fileName);
+            return uploadImage(image, rootFolderName, folderName, fileName);
         }));
 
         await postRef.set({...postData, photo: imageUrls});
@@ -146,22 +148,17 @@ async function processPostData(doc, feedPost) {
     };
 
     if (feedPost) {
-        const userSnapshot = await usersCollection.doc(postData.userid).get();
-        postData.user = {
-            id: userSnapshot.id,
-            ...userSnapshot.data(),
-        };
-        delete postData.user.password;
+        postData.user = await getUser(postData.userid);
     }
 
     const images64 = await Promise.all(postData.photo.map(imagePath => getImage(imagePath)));
 
     for (const comment of postData.comments) {
-        const userSnapshot = await usersCollection.doc(comment.userid).get();
+        const commentUser = await getUser(comment.userid);
         comment.user = {
-            username: userSnapshot.data().username,
-            icon: userSnapshot.data().icon,
-            userid: userSnapshot.id
+            username: commentUser.username,
+            icon: commentUser.icon,
+            userid: commentUser.id
         };
     }
 

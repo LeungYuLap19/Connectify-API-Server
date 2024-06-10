@@ -50,9 +50,33 @@ async function getListUsers(req, res) {
     }
 }
 
+async function setIcon(req, res) {
+    try {
+        const { userid, image } = req.body;
+        const done = await userServices.setIcon(userid, image);
+        done && res.status(200).json({ message: 'done setting icon' });
+    } catch (error) {
+        console.error('Error setting icon:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
+async function setBackground(req, res) {
+    try {
+        const { userid, image } = req.body;
+        const done = await userServices.setBackground(userid, image);
+        done && res.status(200).json({ message: 'done setting background' });
+    } catch (error) {
+        console.error('Error setting background:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
 module.exports = {
     searchUsernames,
     getUser,
     toggleFollowUser,
-    getListUsers
+    getListUsers,
+    setIcon,
+    setBackground
 }

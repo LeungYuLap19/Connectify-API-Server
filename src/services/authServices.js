@@ -1,5 +1,6 @@
 const fbAdmin = require('../config/firebase');
 const bcrypt = require('bcrypt'); 
+const { getImage } = require('./storageServices');
 
 const usersCollection = fbAdmin.db.collection('users');
 
@@ -42,11 +43,14 @@ async function userLogin(identifier, password) {
         let userDoc = await findUserByIdentifier(identifier);
 
         if (userDoc) {
-            const userData = userDoc.data(); // Access the document data
+            const userData = userDoc.data();
             const passwordMatch = await bcrypt.compare(password, userData.password);
             if (passwordMatch) {
                 delete userData.password;
-                return {id: userDoc.id, ...userData};
+
+                const icon = userData.icon ? await getImage(userData.icon) : null;
+                const background = userData.background ? await getImage(userData.background) : null;
+                return {id: userDoc.id, ...userData, icon: icon, background: background};
             } else {
                 throw new Error('Incorrect password');
             }

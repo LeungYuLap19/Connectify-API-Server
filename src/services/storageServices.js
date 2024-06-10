@@ -1,6 +1,6 @@
 const fbAdmin = require('../config/firebase');
 
-async function uploadImage(image64, folderName, fileName) {
+async function uploadImage(image64, rootFolderName, folderName, fileName) {
     const matches = image64.match(/^data:(.+);base64,(.+)$/);
     if (!matches) {
         throw new Error('Invalid image format');
@@ -10,7 +10,7 @@ async function uploadImage(image64, folderName, fileName) {
     const base64 = matches[2];
     const buffer = Buffer.from (base64, 'base64');
 
-    const blob = fbAdmin.storage.file(`${folderName}/${fileName}`);
+    const blob = fbAdmin.storage.file(`${rootFolderName}/${folderName}/${fileName}`);
     const blobStream = blob.createWriteStream({
         metadata: {
             contentType: mimeType,
@@ -32,22 +32,22 @@ async function uploadImage(image64, folderName, fileName) {
 }
 
 async function getImage(filePath) {
-    const file = fbAdmin.storage.file(filePath);
-  
-    return new Promise((resolve, reject) => {
-      file.download((err, contents) => {
-        if (err) {
-          reject(err);
-        } else {
-          const base64 = contents.toString('base64');
-          const mimeType = 'image/jpeg'; // Set the appropriate MIME type for the image
-  
-          const dataUrl = `data:${mimeType};base64,${base64}`;
-          resolve(dataUrl);
-        }
-      });
+  const file = fbAdmin.storage.file(filePath);
+
+  return new Promise((resolve, reject) => {
+    file.download((err, contents) => {
+      if (err) {
+        reject(err);
+      } else {
+        const base64 = contents.toString('base64');
+        const mimeType = 'image/jpeg'; 
+
+        const dataUrl = `data:${mimeType};base64,${base64}`;
+        resolve(dataUrl);
+      }
     });
-  }
+  });
+}
 
 module.exports = {
     uploadImage,

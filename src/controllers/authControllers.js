@@ -8,7 +8,7 @@ async function createUser(req, res) {
             email,
             password,
             icon: null,
-            bio: null,
+            background: null,
             followers: [],
             followings: []
         }
