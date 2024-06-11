@@ -15,7 +15,6 @@ async function discoverPosts(userid) {
         const userData = userSnapshot.data();
         const followings = userData.followings || [];
 
-        // Fetch post IDs excluding those by the user and their followings
         let postIDsQuery = postidsCollection
             .where('userid', 'not-in', [userid, ...followings]);
 
@@ -26,17 +25,18 @@ async function discoverPosts(userid) {
             return [];
         }
 
-        // Convert snapshot to array of post IDs
         const postIDs = postIDsSnapshot.docs.map(doc => doc.id);
 
-        // Shuffle and select 4 random post IDs
         const shuffledPostIDs = shuffleArray(postIDs);
         const selectedPostIDs = shuffledPostIDs.slice(0, 4);
 
-        // Fetch and process post data for the selected post IDs
         const postsData = await Promise.all(selectedPostIDs.map(async postID => {
             const postDoc = await postsCollection.doc(postID).get();
-            return await postServices.processPostData(postDoc, true);
+            const postData = await postServices.processPostData(postDoc, true);
+            return {
+                id: postData.id,
+                photo: postData.photo[0] 
+            };
         }));
 
         return postsData;
@@ -62,7 +62,6 @@ async function discoverUsers(userid) {
 
         let recommendedUserids = [];
 
-        // If the user has followings, fetch recommended users based on followings
         if (followings.length > 0) {
             const recommendedUsers = await getRecommendedUsers(followings, userid, 3);
             recommendedUserids = Object.entries(recommendedUsers)
@@ -70,7 +69,6 @@ async function discoverUsers(userid) {
                 .map(entry => entry[0]);
         }
 
-        // If there are less than 10 recommended users, fetch additional users from the collection
         if (recommendedUserids.length < 3) {
             const remainingCount = 3 - recommendedUserids.length;
             const additionalUserDocs = recommendedUserids.length > 0
@@ -80,9 +78,17 @@ async function discoverUsers(userid) {
             recommendedUserids.push(...additionalUserids);
         }
 
-        // Fetch user data for recommended user IDs
         recommendedUserids = recommendedUserids.filter(id => !followings.includes(id) && id !== userid);
-        const usersData = await Promise.all(recommendedUserids.map(async userid => await userServices.getUser(userid)));
+        const usersData = await Promise.all(
+            recommendedUserids.map(async id => {
+                const user = await userServices.getUser(id);
+                return {
+                    id: user.id,
+                    username: user.username,
+                    icon: user.icon
+                };
+            })
+        );
 
         return usersData;
     } catch (error) {
