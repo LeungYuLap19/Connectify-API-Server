@@ -1,6 +1,7 @@
 const fbAdmin = require('../config/firebase');
 const bcrypt = require('bcrypt'); 
 const { getImage } = require('./storageServices');
+const tokenServices = require('./tokenServices');
 
 const usersCollection = fbAdmin.db.collection('users');
 
@@ -17,7 +18,9 @@ async function createUser(userData) {
         const userRef = usersCollection.doc(); 
         await userRef.set(userDataWithHashedPassword);
 
-        return { id: userRef.id, ...userDataWithoutPassword };
+        const tokens = generateTokens(userRef.id, false);
+
+        return { id: userRef.id, ...userDataWithoutPassword, tokens: tokens };
     } catch (error) {
         console.error('Error adding user:', error);
         throw error;
@@ -38,7 +41,7 @@ async function checkUsernameUsed(username) {
     }
 }
 
-async function userLogin(identifier, password) {
+async function userLogin(identifier, password, rememberMe) {
     try {
         let userDoc = await findUserByIdentifier(identifier);
 
@@ -50,7 +53,10 @@ async function userLogin(identifier, password) {
 
                 const icon = userData.icon ? await getImage(userData.icon) : null;
                 const background = userData.background ? await getImage(userData.background) : null;
-                return {id: userDoc.id, ...userData, icon: icon, background: background};
+
+                const tokens = generateTokens(userDoc.id, rememberMe);
+
+                return {id: userDoc.id, ...userData, icon: icon, background: background, tokens: tokens};
             } else {
                 throw new Error('Incorrect password');
             }
@@ -78,6 +84,12 @@ async function findUserByIdentifier(identifier) {
     return userDoc;
 }
 
+function generateTokens(userid, rememberMe) {
+    const refreshToken = tokenServices.generateRefreshToken(userid, rememberMe);
+    const accessToken = tokenServices.generateAccessToken(userid);
+    
+    return { refreshToken, accessToken }
+}
 
 module.exports = {
     createUser,

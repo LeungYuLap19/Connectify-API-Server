@@ -13,6 +13,17 @@ async function createUser(req, res) {
             followings: []
         }
         const userDataWithoutPassword = await authServices.createUser(userData);
+        const { refreshToken, accessToken } = userDataWithoutPassword.tokens;
+        delete userDataWithoutPassword.tokens;
+
+        res.cookie('accessToken', accessToken, {
+            httpOnly: true,
+            sameSite: 'Strict'
+        });
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            sameSite: 'Strict'
+        });
         res.status(201).json({ 
             message: 'User created successfully',
             data: userDataWithoutPassword
@@ -31,8 +42,19 @@ async function createUser(req, res) {
 
 async function userLogin(req, res) {
     try {
-        const { identifier, password } = req.body;
-        const userData = await authServices.userLogin(identifier, password);
+        const { identifier, password, rememberMe } = req.body;
+        const userData = await authServices.userLogin(identifier, password, rememberMe);
+        const { refreshToken, accessToken } = userData.tokens;
+        delete userData.tokens;
+
+        res.cookie('accessToken', accessToken, {
+            httpOnly: true,
+            sameSite: 'Strict'
+        });
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            sameSite: 'Strict'
+        });
         res.status(200).json({ 
             message: 'User login successfully',
             data: userData
